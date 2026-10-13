@@ -1,5 +1,5 @@
 
-import { HarshRouter, Routes, Route } from "react-router-dom";
+import { HashRouter, Routes, Route } from "react-router-dom";
 
 import Layout from "./components/layout/Layout";
 
@@ -24,7 +24,7 @@ function App() {
     <ThemeProvider>
       <AppProvider>
         <ToastProvider>
-          <HarshRouter>
+          <HashRouter>
             <Routes>
               <Route path="/" element={<Layout />}>
                 <Route index element={<Dashboard />} />
@@ -47,7 +47,7 @@ function App() {
                 <Route path="*" element={<NotFound />} />
               </Route>
             </Routes>
-          </HarshRouter>
+          </HashRouter>
         </ToastProvider>
       </AppProvider>
     </ThemeProvider>
