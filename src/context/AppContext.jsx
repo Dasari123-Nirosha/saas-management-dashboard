@@ -40,6 +40,69 @@ const DEFAULT_CUSTOMERS = [
   { id: "CUS-1008", name: "Ethan Thomas", email: "ethan.thomas@example.com", company: "Nova Tech", phone: "+1 555-0108", status: "Pending", plan: "Enterprise", joinedAt: "2026-05-02" },
 ];
 
+const DEFAULT_SUBSCRIPTIONS = [
+  {
+    id: "SUB-1001",
+    customer: "Olivia Martin",
+    email: "olivia.martin@example.com",
+    plan: "Enterprise",
+    status: "Active",
+    billing: "Monthly",
+    amount: 199,
+    startDate: "2026-01-15",
+  },
+  {
+    id: "SUB-1002",
+    customer: "James Wilson",
+    email: "james.wilson@example.com",
+    plan: "Professional",
+    status: "Active",
+    billing: "Monthly",
+    amount: 79,
+    startDate: "2026-02-08",
+  },
+  {
+    id: "SUB-1003",
+    customer: "Sophia Brown",
+    email: "sophia.brown@example.com",
+    plan: "Starter",
+    status: "Trial",
+    billing: "Monthly",
+    amount: 19,
+    startDate: "2026-02-19",
+  },
+  {
+    id: "SUB-1004",
+    customer: "William Davis",
+    email: "william.davis@example.com",
+    plan: "Enterprise",
+    status: "Past due",
+    billing: "Yearly",
+    amount: 199,
+    startDate: "2026-03-01",
+  },
+  {
+    id: "SUB-1005",
+    customer: "Isabella Garcia",
+    email: "isabella.garcia@example.com",
+    plan: "Professional",
+    status: "Inactive",
+    billing: "Quarterly",
+    amount: 79,
+    startDate: "2026-03-11",
+  },
+  {
+    id: "SUB-1006",
+    customer: "Benjamin Miller",
+    email: "benjamin.miller@example.com",
+    plan: "Starter",
+    status: "Pending",
+    billing: "Monthly",
+    amount: 19,
+    startDate: "2026-04-05",
+  },
+];
+
 function readStorage(key, fallback = []) {
   try {
     const saved = localStorage.getItem(key);
@@ -47,6 +110,7 @@ function readStorage(key, fallback = []) {
     if (saved === null) return fallback;
 
     const parsed = JSON.parse(saved);
+
     return Array.isArray(parsed) ? parsed : fallback;
   } catch (error) {
     console.error(`Could not read ${key} from localStorage:`, error);
@@ -66,10 +130,13 @@ function createActions(setItems, prefix) {
   const add = (item) => {
     const newItem = {
       ...item,
-      id: item.id || `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      id:
+        item.id ||
+        `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     };
 
     setItems((current) => [...current, newItem]);
+
     return newItem;
   };
 
@@ -99,16 +166,25 @@ export function AppProvider({ children }) {
     readStorage(STORAGE_KEYS.users, DEFAULT_USERS)
   );
 
-  const [subscriptions, setSubscriptions] = useState(() =>
-    readStorage(STORAGE_KEYS.subscriptions, [])
-  );
+  const [subscriptions, setSubscriptions] = useState(() => {
+    const saved = readStorage(
+      STORAGE_KEYS.subscriptions,
+      DEFAULT_SUBSCRIPTIONS
+    );
+
+    return saved.length > 0 ? saved : DEFAULT_SUBSCRIPTIONS;
+  });
 
   const [plans, setPlans] = useState(() =>
     readStorage(STORAGE_KEYS.plans, [])
   );
 
   const [customers, setCustomers] = useState(() => {
-    const saved = readStorage(STORAGE_KEYS.customers, DEFAULT_CUSTOMERS);
+    const saved = readStorage(
+      STORAGE_KEYS.customers,
+      DEFAULT_CUSTOMERS
+    );
+
     return saved.length > 0 ? saved : DEFAULT_CUSTOMERS;
   });
 
@@ -117,208 +193,316 @@ export function AppProvider({ children }) {
   );
 
   useEffect(() => writeStorage(STORAGE_KEYS.users, users), [users]);
-  useEffect(() => writeStorage(STORAGE_KEYS.subscriptions, subscriptions), [subscriptions]);
+
+  useEffect(
+    () => writeStorage(STORAGE_KEYS.subscriptions, subscriptions),
+    [subscriptions]
+  );
+
   useEffect(() => writeStorage(STORAGE_KEYS.plans, plans), [plans]);
-  useEffect(() => writeStorage(STORAGE_KEYS.customers, customers), [customers]);
-  useEffect(() => writeStorage(STORAGE_KEYS.activities, activities), [activities]);
+
+  useEffect(
+    () => writeStorage(STORAGE_KEYS.customers, customers),
+    [customers]
+  );
+
+  useEffect(
+    () => writeStorage(STORAGE_KEYS.activities, activities),
+    [activities]
+  );
 
   const recordActivity = useCallback((activity) => {
-    setActivities((current) => [
-      {
-        id: `ACT-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        timestamp: new Date().toISOString(),
-        time: "Just now",
-        ...activity,
-      },
-      ...current,
-    ].slice(0, 50));
+    setActivities((current) =>
+      [
+        {
+          id: `ACT-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          timestamp: new Date().toISOString(),
+          time: "Just now",
+          ...activity,
+        },
+        ...current,
+      ].slice(0, 50)
+    );
   }, []);
 
-  const userActions = useMemo(() => createActions(setUsers, "USR"), []);
-  const subscriptionActions = useMemo(() => createActions(setSubscriptions, "SUB"), []);
-  const planActions = useMemo(() => createActions(setPlans, "PLN"), []);
-  const customerActions = useMemo(() => createActions(setCustomers, "CUS"), []);
+  const userActions = useMemo(
+    () => createActions(setUsers, "USR"),
+    []
+  );
 
-  const addUser = useCallback((item) => {
-    const user = userActions.add(item);
-    recordActivity({
-      type: "user",
-      title: "New user registered",
-      description: `${user.name || user.email || "A new user"} was added`,
-      path: "/users",
-    });
-    return user;
-  }, [userActions, recordActivity]);
+  const subscriptionActions = useMemo(
+    () => createActions(setSubscriptions, "SUB"),
+    []
+  );
 
-  const updateUser = useCallback((id, updates) => {
-    userActions.update(id, updates);
-    recordActivity({
-      type: "user",
-      title: "User updated",
-      description: `User ${id} was updated`,
-      path: "/users",
-    });
-  }, [userActions, recordActivity]);
+  const planActions = useMemo(
+    () => createActions(setPlans, "PLN"),
+    []
+  );
 
-  const deleteUser = useCallback((id) => {
-    userActions.remove(id);
-    recordActivity({
-      type: "user",
-      title: "User deleted",
-      description: `User ${id} was removed`,
-      path: "/users",
-    });
-  }, [userActions, recordActivity]);
+  const customerActions = useMemo(
+    () => createActions(setCustomers, "CUS"),
+    []
+  );
 
-  const addSubscription = useCallback((item) => {
-    const subscription = subscriptionActions.add(item);
-    const customerName = subscription.customer || subscription.name || subscription.email || "A subscription";
+  const addUser = useCallback(
+    (item) => {
+      const user = userActions.add(item);
 
-    recordActivity({
-      type: "subscription",
-      title: "New subscription created",
-      description: `Subscription created for ${customerName}`,
-      path: "/subscriptions",
-    });
+      recordActivity({
+        type: "user",
+        title: "New user registered",
+        description: `${user.name || user.email || "A new user"} was added`,
+        path: "/users",
+      });
 
-    return subscription;
-  }, [subscriptionActions, recordActivity]);
+      return user;
+    },
+    [userActions, recordActivity]
+  );
 
-  const updateSubscription = useCallback((id, updates) => {
-    setSubscriptions((current) =>
-      current.map((subscription) =>
-        String(subscription.id) === String(id)
-          ? { ...subscription, ...updates, id: subscription.id }
-          : subscription
-      )
-    );
+  const updateUser = useCallback(
+    (id, updates) => {
+      userActions.update(id, updates);
 
-    const currentSubscription = subscriptions.find(
-      (subscription) => String(subscription.id) === String(id)
-    );
+      recordActivity({
+        type: "user",
+        title: "User updated",
+        description: `User ${id} was updated`,
+        path: "/users",
+      });
+    },
+    [userActions, recordActivity]
+  );
 
-    recordActivity({
-      type: "subscription",
-      title: "Subscription updated",
-      description: `Subscription updated${currentSubscription?.customer ? ` for ${currentSubscription.customer}` : ""}`,
-      path: "/subscriptions",
-    });
-  }, [subscriptions, recordActivity]);
+  const deleteUser = useCallback(
+    (id) => {
+      userActions.remove(id);
 
-  const removeSubscription = useCallback((id) => {
-    const currentSubscription = subscriptions.find(
-      (subscription) => String(subscription.id) === String(id)
-    );
+      recordActivity({
+        type: "user",
+        title: "User deleted",
+        description: `User ${id} was removed`,
+        path: "/users",
+      });
+    },
+    [userActions, recordActivity]
+  );
 
-    setSubscriptions((current) =>
-      current.filter((subscription) => String(subscription.id) !== String(id))
-    );
+  const addSubscription = useCallback(
+    (item) => {
+      const subscription = subscriptionActions.add(item);
+      const customerName =
+        subscription.customer ||
+        subscription.name ||
+        subscription.email ||
+        "A subscription";
 
-    recordActivity({
-      type: "subscription",
-      title: "Subscription cancelled",
-      description: `Subscription removed${currentSubscription?.customer ? ` for ${currentSubscription.customer}` : ""}`,
-      path: "/subscriptions",
-    });
-  }, [subscriptions, recordActivity]);
+      recordActivity({
+        type: "subscription",
+        title: "New subscription created",
+        description: `Subscription created for ${customerName}`,
+        path: "/subscriptions",
+      });
 
-  const addPlan = useCallback((item) => {
-    const plan = planActions.add(item);
-    recordActivity({
-      type: "plan",
-      title: "New plan created",
-      description: `${plan.name || "A pricing plan"} was created`,
-      path: "/plans",
-    });
-    return plan;
-  }, [planActions, recordActivity]);
+      return subscription;
+    },
+    [subscriptionActions, recordActivity]
+  );
 
-  const updatePlan = useCallback((id, updates) => {
-    planActions.update(id, updates);
-    recordActivity({
-      type: "plan",
-      title: "Plan updated",
-      description: `Plan ${id} was updated`,
-      path: "/plans",
-    });
-  }, [planActions, recordActivity]);
+  const updateSubscription = useCallback(
+    (id, updates) => {
+      setSubscriptions((current) =>
+        current.map((subscription) =>
+          String(subscription.id) === String(id)
+            ? { ...subscription, ...updates, id: subscription.id }
+            : subscription
+        )
+      );
 
-  const deletePlan = useCallback((id) => {
-    planActions.remove(id);
-    recordActivity({
-      type: "plan",
-      title: "Plan deleted",
-      description: `Plan ${id} was removed`,
-      path: "/plans",
-    });
-  }, [planActions, recordActivity]);
+      const currentSubscription = subscriptions.find(
+        (subscription) => String(subscription.id) === String(id)
+      );
 
-  const addCustomer = useCallback((item) => {
-    const customer = customerActions.add(item);
-    recordActivity({
-      type: "success",
-      title: "Customer account created",
-      description: `${customer.name || customer.email || "A new customer"} was added`,
-      path: "/customers",
-    });
-    return customer;
-  }, [customerActions, recordActivity]);
+      recordActivity({
+        type: "subscription",
+        title: "Subscription updated",
+        description: `Subscription updated${
+          currentSubscription?.customer
+            ? ` for ${currentSubscription.customer}`
+            : ""
+        }`,
+        path: "/subscriptions",
+      });
+    },
+    [subscriptions, recordActivity]
+  );
 
-  const updateCustomer = useCallback((id, updates) => {
-    customerActions.update(id, updates);
-    recordActivity({
-      type: "success",
-      title: "Customer updated",
-      description: `Customer ${id} was updated`,
-      path: "/customers",
-    });
-  }, [customerActions, recordActivity]);
+  const removeSubscription = useCallback(
+    (id) => {
+      const currentSubscription = subscriptions.find(
+        (subscription) => String(subscription.id) === String(id)
+      );
 
-  const deleteCustomer = useCallback((id) => {
-    customerActions.remove(id);
-    recordActivity({
-      type: "error",
-      title: "Customer deleted",
-      description: `Customer ${id} was removed`,
-      path: "/customers",
-    });
-  }, [customerActions, recordActivity]);
+      setSubscriptions((current) =>
+        current.filter(
+          (subscription) => String(subscription.id) !== String(id)
+        )
+      );
 
-  const value = useMemo(() => ({
-    users,
-    setUsers,
-    addUser,
-    updateUser,
-    deleteUser,
+      recordActivity({
+        type: "subscription",
+        title: "Subscription cancelled",
+        description: `Subscription removed${
+          currentSubscription?.customer
+            ? ` for ${currentSubscription.customer}`
+            : ""
+        }`,
+        path: "/subscriptions",
+      });
+    },
+    [subscriptions, recordActivity]
+  );
 
-    subscriptions,
-    setSubscriptions,
-    addSubscription,
-    updateSubscription,
-    removeSubscription,
+  const addPlan = useCallback(
+    (item) => {
+      const plan = planActions.add(item);
 
-    plans,
-    setPlans,
-    addPlan,
-    updatePlan,
-    deletePlan,
+      recordActivity({
+        type: "plan",
+        title: "New plan created",
+        description: `${plan.name || "A pricing plan"} was created`,
+        path: "/plans",
+      });
 
-    customers,
-    setCustomers,
-    addCustomer,
-    updateCustomer,
-    deleteCustomer,
+      return plan;
+    },
+    [planActions, recordActivity]
+  );
 
-    activities,
-    setActivities,
-    recordActivity,
-  }), [
-    users, addUser, updateUser, deleteUser,
-    subscriptions, addSubscription, updateSubscription, removeSubscription,
-    plans, addPlan, updatePlan, deletePlan,
-    customers, addCustomer, updateCustomer, deleteCustomer,
-    activities, recordActivity,
-  ]);
+  const updatePlan = useCallback(
+    (id, updates) => {
+      planActions.update(id, updates);
+
+      recordActivity({
+        type: "plan",
+        title: "Plan updated",
+        description: `Plan ${id} was updated`,
+        path: "/plans",
+      });
+    },
+    [planActions, recordActivity]
+  );
+
+  const deletePlan = useCallback(
+    (id) => {
+      planActions.remove(id);
+
+      recordActivity({
+        type: "plan",
+        title: "Plan deleted",
+        description: `Plan ${id} was removed`,
+        path: "/plans",
+      });
+    },
+    [planActions, recordActivity]
+  );
+
+  const addCustomer = useCallback(
+    (item) => {
+      const customer = customerActions.add(item);
+
+      recordActivity({
+        type: "success",
+        title: "Customer account created",
+        description: `${customer.name || customer.email || "A new customer"} was added`,
+        path: "/customers",
+      });
+
+      return customer;
+    },
+    [customerActions, recordActivity]
+  );
+
+  const updateCustomer = useCallback(
+    (id, updates) => {
+      customerActions.update(id, updates);
+
+      recordActivity({
+        type: "success",
+        title: "Customer updated",
+        description: `Customer ${id} was updated`,
+        path: "/customers",
+      });
+    },
+    [customerActions, recordActivity]
+  );
+
+  const deleteCustomer = useCallback(
+    (id) => {
+      customerActions.remove(id);
+
+      recordActivity({
+        type: "error",
+        title: "Customer deleted",
+        description: `Customer ${id} was removed`,
+        path: "/customers",
+      });
+    },
+    [customerActions, recordActivity]
+  );
+
+  const value = useMemo(
+    () => ({
+      users,
+      setUsers,
+      addUser,
+      updateUser,
+      deleteUser,
+
+      subscriptions,
+      setSubscriptions,
+      addSubscription,
+      updateSubscription,
+      removeSubscription,
+
+      plans,
+      setPlans,
+      addPlan,
+      updatePlan,
+      deletePlan,
+
+      customers,
+      setCustomers,
+      addCustomer,
+      updateCustomer,
+      deleteCustomer,
+
+      activities,
+      setActivities,
+      recordActivity,
+    }),
+    [
+      users,
+      addUser,
+      updateUser,
+      deleteUser,
+      subscriptions,
+      addSubscription,
+      updateSubscription,
+      removeSubscription,
+      plans,
+      addPlan,
+      updatePlan,
+      deletePlan,
+      customers,
+      addCustomer,
+      updateCustomer,
+      deleteCustomer,
+      activities,
+      recordActivity,
+    ]
+  );
 
   return (
     <AppContext.Provider value={value}>
